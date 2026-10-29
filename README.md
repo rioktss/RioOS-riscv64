@@ -16,6 +16,14 @@
 
 This source tree is the **RISC-V64-only** port of RioOS. It is a freestanding C++17/assembly kernel, not a Linux application. The normal boot path opens directly to the UART command shell.
 
+
+# RioOS Preview
+
+![RioOS Preview](docs/img/view.jpg)
+
+*RioOS running on QEMU system aarch64*
+
+
 ## Quick start
 
 Install Clang/Clang++, LLD, Python 3, `readelf`/`llvm-readelf`, `nm`/`llvm-nm`, and `qemu-system-riscv64` with OpenSBI support.
