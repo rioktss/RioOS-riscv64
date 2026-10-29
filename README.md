@@ -21,7 +21,7 @@ This source tree is the **RISC-V64-only** port of RioOS. It is a freestanding C+
 
 ![RioOS Preview](docs/img/view.jpg)
 
-*RioOS running on QEMU system aarch64*
+*RioOS running on QEMU system riscv64*
 
 
 ## Quick start
