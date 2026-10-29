@@ -1,18 +1,9 @@
-# RioOS Documentation
+# Documentation
 
-The project documentation is for the **MyKernel RISC-V64** source port.
-
-Start here:
-
-- [Build and Run](BUILD_AND_RUN.md)
-- [Architecture and boot flow](ARCHITECTURE.md)
-- [Learning guide](LEARN.md)
-- [Development workflow](DEVELOPMENT.md)
-- [FAQ](FAQ.md)
-- [File descriptors and pipes](FILE_DESCRIPTORS.md)
-- [Android-inspired UI](ANDROID_UI.md)
-- [Pixel UI](PIXEL_UI.md)
-
-Subsystem notes include P0 hardening, P1 file descriptors/pipes, P2 filesystem
-security, P3 networking, P4 SMP/driver hardening, test matrices and third-party
-notices. Host test success is not a replacement for end-to-end QEMU testing.
+- [Build and Run](BUILD_AND_RUN.md): host requirements, shell-only build and run commands.
+- [Architecture](ARCHITECTURE.md): boot path and core subsystem layout.
+- [Development](DEVELOPMENT.md): development workflow.
+- [File descriptors](FILE_DESCRIPTORS.md): descriptor subsystem notes.
+- [Learning guide](LEARN.md): code exploration path.
+- [Hardening P0](P0_HARDENING.md), [Pipes P1](P1_FD_PIPES.md), [Filesystem security P2](P2_FILESYSTEM_SECURITY.md), [Networking P3](P3_NETWORKING.md), and [SMP/driver hardening P4](P4_SMP_DRIVER_HARDENING.md): subsystem details.
+- [Roadmap](ROADMAP.md), [FAQ](FAQ.md), and [third-party notices](THIRD_PARTY_NOTICES.md).

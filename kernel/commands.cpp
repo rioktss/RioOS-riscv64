@@ -1,7 +1,6 @@
 #include "commands.h"
 
 #include "uart.h"
-#include "fb.h"
 #include "memory.h"
 #include "string.h"
 
@@ -419,7 +418,6 @@ static const ManualEntry manual_entries[] =
     {"history", "show command history", "history [10|-c]", "-c clear history; N show last N entries; Arrow Up/Down recall"},
     {"threads", "list cooperative kernel threads", "threads", "Shows state, priority, run counts, and context switches"},
     {"smp", "show CPU/SMP bring-up readiness", "smp", "Reports current MPIDR Aff0, online CPU count, and whether SMP is enabled; secondary startup is disabled"},
-    {"fbinfo", "show framebuffer backend status", "fbinfo", "Reports software RAM-surface state; the default QEMU runner remains serial-only"},
     {"thread-demo", "exercise voluntary context switching", "thread-demo", "Uses yield only; timer IRQ/preemption stays disabled"},
     {"unset", "remove an environment variable", "unset NAME", "NAME must follow shell identifier rules"},
     {"fds", "list open file descriptors", "fds", "Shows standard streams and currently open descriptors"},
@@ -1238,14 +1236,6 @@ static void command_smp_status()
     uart_puts("Secondary startup  : not implemented; no secondary core is released\r\n");
 }
 
-static void command_fbinfo()
-{
-    uart_puts("Framebuffer diagnostics\r\n------------------------\r\nBackend : reserved RAM surface\r\nStatus  : ");
-    uart_puts(fb_is_ready() ? "initialized\r\n" : "not initialized\r\n");
-    uart_puts("Geometry: "); print_u64((uint64_t)fb_get_width());
-    uart_putc('x'); print_u64((uint64_t)fb_get_height());
-    uart_puts(" pixels, 32 bpp\r\nDisplay : no QEMU video device is wired to this surface; UART remains the console\r\n");
-}
 
 static void command_thread_demo()
 {
@@ -1359,7 +1349,6 @@ static void command_help()
         "  tasks                Show scheduler and processes\r\n"
         "  threads              Show cooperative kernel threads\r\n"
         "  smp                  Show CPU topology; SMP remains disabled by default\r\n"
-        "  fbinfo               Show framebuffer RAM-surface status (serial console remains default)\r\n"
         "  fds                  List open file descriptors\r\n"
         "  thread-demo          Test context switching without timer IRQ\r\n"
         "  mount                Show storage and filesystem mount\r\n"
@@ -2119,7 +2108,6 @@ static void command_user_login(const char* argument)
     char password[32];
     uart_puts("user login\r\n");
     uart_puts("Password: ");
-    if (!uart_output_hook_active()) fb_print("Password: ", 0xFFFFFF);
 
     if (security_read_password(password, sizeof(password)) < 0)
     {
@@ -2139,7 +2127,6 @@ static void command_su(const char* argument)
     {
         char password[48];
         uart_puts("root password: ");
-        if (!uart_output_hook_active()) fb_print("root password: ", 0xFFFFFF);
         if (security_read_password(password, sizeof(password)) < 0 ||
             security_login_root(password) != 0)
         {
@@ -2578,7 +2565,6 @@ void execute_command(
     if (str_equal(command, "tasks")) { command_tasks(); return; }
     if (str_equal(command, "threads")) { command_threads(); return; }
     if (str_equal(command, "smp")) { command_smp_status(); return; }
-    if (str_equal(command, "fbinfo")) { command_fbinfo(); return; }
     if (str_equal(command, "fds")) { fd_list(); return; }
     if (str_equal(command, "thread-demo")) { command_thread_demo(); return; }
     if (str_equal(command, "mount")) { command_mount(); return; }

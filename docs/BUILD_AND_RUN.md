@@ -1,74 +1,35 @@
-# Build and Run MyKernel RISC-V64
+# Build and Run (RISC-V64)
 
-This source archive is the RISC-V 64 port of MyKernel. It builds a freestanding
-RV64 kernel, three U-mode ELF programs, a MyFS disk image, and the host-side
-regression tests. The intended machine is QEMU `virt`, with OpenSBI handing the
-kernel off in supervisor mode.
+RioOS is a freestanding RV64 kernel for QEMU `virt` and OpenSBI. It boots into the UART command shell. All interactive guest output is text-mode.
 
 ## Requirements
 
-- Clang and Clang++ with the `riscv64-unknown-elf` target
-- LLD (`ld.lld`)
-- Python 3, `readelf`, and `nm` for release verification
-- QEMU's `qemu-system-riscv64` with OpenSBI firmware for runtime testing
-- A desktop display backend (GTK or SDL) for the graphical UI
+Install Clang/Clang++, LLD, Python 3, `readelf` (or `llvm-readelf`), `nm` (or `llvm-nm`), and QEMU with `qemu-system-riscv64` and OpenSBI support. On Windows, use the `.ps1` wrappers in `windows/`; they require Git for Windows (Git Bash) and its `bash.exe` on `PATH`.
 
-On Arch Linux, install the relevant `clang`, `lld`, `python`, `binutils`, and
-QEMU packages. In Termux, the kernel can be cross-compiled with the available
-Clang/LLD packages; QEMU system emulation may depend on the packages and device
-support available for the particular Android environment.
+## Build
 
-## Build and test
+Run the platform script from the repository root:
 
 ```sh
-chmod +x build.sh run.sh run-ui.sh
-./build.sh --clean
+bash linux/build.sh --clean
 ```
 
-The output is under `build/riscv64/`:
+Use `termux/build.sh` or `macos/build.sh` on the corresponding host; in Windows PowerShell, run `./windows/build.ps1`. The kernel and userspace ELF output is written to `build/riscv64/`. The 16 MiB filesystem image is generated at `storage/disk.img`.
 
-- `kernel.elf` — RV64 supervisor kernel, entry `0x80200000`
-- `user_init.elf` — user-mode syscall smoke test
-- `nano.elf` — basic terminal editor
-- `calc.elf` — interactive calculator
-
-The script also builds `storage/disk.img` and runs host regression tests and
-`tests/verify_release.py`. The disk image and compiler outputs are generated
-artifacts and are intentionally excluded from the source ZIP.
-
-## Run in QEMU
-
-Serial shell:
+## Run the shell
 
 ```sh
-./run.sh
+bash linux/run.sh
 ```
 
-Graphical pixel UI:
+This launches QEMU in the current host terminal. To show the guest UART shell in a separate QEMU text-console window, use:
 
 ```sh
-./run-ui.sh
+bash linux/run-terminal.sh
 ```
 
-The graphical runner passes `ramfb`, VirtIO block/network, and VirtIO keyboard
-and tablet devices to QEMU. The exact framebuffer/input behaviour should be
-validated on the host's QEMU version; a successful cross-build alone does not
-prove all device interactions work at runtime.
+The separate-window runner displays a text serial console, not a guest desktop. Choose a supported QEMU display backend with `RIOOS_TERMINAL_DISPLAY` if needed. Termux's separate-window runner normally requires Termux:X11 and a QEMU build with SDL display support; `termux/run.sh` works directly in the Termux terminal.
 
-Helpful overrides:
+## Kernel features
 
-```sh
-RIOOS_MEM=256M RIOOS_SMP=1 ./run.sh
-RIOOS_BIOS=/path/to/opensbi-fw_dynamic.bin ./run.sh
-QEMU=/path/to/qemu-system-riscv64 ./run.sh
-RIOOS_DISPLAY=sdl ./run-ui.sh
-```
-
-## What is ported
-
-The source includes the RV64 boot path, supervisor trap frame and syscall entry,
-Sv39 translation, U-mode transitions, SBI timer, 16550 UART, RTC, thread context
-switching, shared filesystem/VFS, process metadata and ELF loading, file
-descriptors and pipes, VirtIO block/network/input, UDP/DNS networking, pixel UI,
-RPK package assets, diagnostics, and host regression tests. Features that depend
-on specific firmware or virtual devices still require runtime testing on QEMU.
+The build includes the kernel shell, command history/completion, terminal `nano` and `calc`, U-mode ELF loading/syscalls, MyFS/VFS, block and network drivers, diagnostics, process/thread primitives, and host regression tests.

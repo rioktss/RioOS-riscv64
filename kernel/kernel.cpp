@@ -18,7 +18,6 @@
 #include "security.h"
 #include "smp.h"
 #include "version.h"
-#include "ui.h"
 
 #ifdef __riscv
 extern "C" void riscv64_uart_init();
@@ -122,9 +121,7 @@ uart_puts(
     "\r\n"
 );
 
-/* Pixel UI starts only when QEMU ramfb is present. The normal headless runner
-       retains its original UART shell, and timer IRQ remains disabled. */
-ui_start();
+/* Boot directly into the UART shell. */
 shell();
 
     while (1)

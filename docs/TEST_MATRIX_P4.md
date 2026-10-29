@@ -1,13 +1,14 @@
-# RioOS 1.10.0 — P4 test matrix
+# P4 — Driver and SMP foundations
 
-| Area | Test | Expected result |
-|---|---|---|
-| SMP default | `tests/smp_host_test.cpp` | One online CPU, SMP disabled, CPU ID masking contract, try-lock/lock/unlock pass |
-| Framebuffer | `tests/fb_host_test.cpp` | Host attach bounds, safe uninitialized state, glyph drawing, background clearing, scrolling, cursor clamp pass |
-| VirtIO-Net RX | `tests/verify_release.py` | Driver must reject RX lengths above the backing buffer and reject packet truncation |
-| Build | `bash build.sh --clean` | RISC-V64 kernel and userspace ELF link successfully |
-| Regression | Host suite in `build.sh` | All 15 host test executables pass |
-| Release | `tests/verify_release.py` | ELF, expected source, syscall, networking, SMP, framebuffer and timer-off invariants pass |
-| Runtime | `./run.sh` on a host with QEMU RISC-V64 | Manual follow-up: shell, keyboard input, `smp`, `fbinfo`, disk, and networking remain stable |
+The shell-only branch retains the CPU-identification API, SMP default-state reporting, atomic spinlock primitives, VirtIO-Net receive-length validation, and host regression checks for core drivers.
 
-The runtime row is not marked passed by the host-only build. SMP remains disabled and timer IRQ remains off by default.
+## Safety limits
+
+- No secondary CPU is released; the online CPU count remains one and SMP stays disabled.
+- Spinlocks are primitives only and do not imply that all existing subsystems are SMP-safe.
+- Timer IRQ remains disabled during normal boot.
+- Host tests do not replace interactive QEMU boot validation.
+
+## Validation
+
+`linux/build.sh` builds the RV64 kernel and terminal userspace, runs non-graphical host tests, verifies the kernel ELF metadata, and checks that shell-only source and symbol checks pass. Runtime boot still requires a compatible `qemu-system-riscv64` installation.

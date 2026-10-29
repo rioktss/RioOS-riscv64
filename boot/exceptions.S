@@ -1,129 +1,129 @@
-.section .text.vectors, "ax"
-.align 11
-.global exception_vectors_el1
-
-.macro VECTOR target
-    b \target
-    .space 124
-.endm
-
-/* Exactly 16 entries x 128 bytes = 2048 bytes. */
+/*
+ * RV64 supervisor trap entry. ExceptionFrame offsets are defined in
+ * include/exception_frame.h. All integer registers are preserved. A trap
+ * from U-mode switches to the kernel stack saved in sscratch; S-mode traps
+ * remain on the current kernel stack.
+ */
+.section .text.vectors,"ax",@progbits
+.balign 4
+.globl exception_vectors_el1
+.globl riscv64_trap_entry
+.type exception_vectors_el1,@function
 exception_vectors_el1:
-    /* Current EL with SP_EL0: synchronous, IRQ, FIQ, SError. */
-    VECTOR sync_el1_entry
-    VECTOR irq_el1_entry
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
+riscv64_trap_entry:
+    /* User entry: sp <- kernel stack, sscratch <- user sp.
+       Supervisor entry: sp <- 0, so swap back without changing the stack. */
+    csrrw sp, sscratch, sp
+    bnez sp, .Lstack_ready
+    csrrw sp, sscratch, sp
+.Lstack_ready:
+    addi sp, sp, -304
 
-    /* Current EL with SP_ELx: synchronous, IRQ, FIQ, SError. */
-    VECTOR sync_el1_entry
-    VECTOR irq_el1_entry
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
+    /* x0..x31 (x0 is architecturally zero). */
+    sd zero,   0(sp)
+    sd ra,     8(sp)
+    sd gp,    24(sp)
+    sd tp,    32(sp)
+    sd t0,    40(sp)
+    sd t1,    48(sp)
+    sd t2,    56(sp)
+    sd s0,    64(sp)
+    sd s1,    72(sp)
+    sd a0,    80(sp)
+    sd a1,    88(sp)
+    sd a2,    96(sp)
+    sd a3,   104(sp)
+    sd a4,   112(sp)
+    sd a5,   120(sp)
+    sd a6,   128(sp)
+    sd a7,   136(sp)
+    sd s2,   144(sp)
+    sd s3,   152(sp)
+    sd s4,   160(sp)
+    sd s5,   168(sp)
+    sd s6,   176(sp)
+    sd s7,   184(sp)
+    sd s8,   192(sp)
+    sd s9,   200(sp)
+    sd s10,  208(sp)
+    sd s11,  216(sp)
+    sd t3,   224(sp)
+    sd t4,   232(sp)
+    sd t5,   240(sp)
+    sd t6,   248(sp)
 
-    /* Lower EL using AArch64: synchronous, IRQ, FIQ, SError. */
-    VECTOR sync_el0_entry
-    VECTOR irq_el0_entry
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
+    /* Recover the interrupted sp without clobbering any unsaved GPR. */
+    csrr t0, sscratch
+    bnez t0, .Lsave_user_sp
+    addi t0, sp, 304
+.Lsave_user_sp:
+    sd t0, 16(sp)
+    /* Keep sscratch clear while executing in S-mode. Otherwise a nested
+       synchronous trap could mistake the interrupted user SP for a kernel SP. */
+    csrw sscratch, zero
 
-    /* Lower EL using AArch32: unsupported in this kernel. */
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
-    VECTOR irq_unhandled_entry
+    csrr t0, sepc
+    sd t0, 256(sp)
+    csrr t0, sstatus
+    sd t0, 264(sp)
+    csrr t0, scause
+    sd t0, 272(sp)
+    csrr t0, stval
+    sd t0, 280(sp)
+    sd zero, 288(sp)
+    sd zero, 296(sp)
 
-.section .text.exception_handlers, "ax"
-.global sync_el1_entry
-.global sync_el0_entry
-.global exception_restore_el1
-.global irq_unhandled_entry
-.global irq_el1_entry
-.global irq_el0_entry
+    mv a0, sp
+    call riscv64_trap_dispatch
 
-.macro SAVE_EXCEPTION_FRAME
-    /* 31 GPRs + ELR + SPSR + ESR + FAR + padding = 288 bytes. */
-    sub sp, sp, #288
+    /* The C dispatcher may edit sepc/sstatus and the saved return registers. */
+    ld t0, 256(sp)
+    csrw sepc, t0
+    ld t0, 264(sp)
+    csrw sstatus, t0
 
-    stp x0, x1, [sp, #0]
-    stp x2, x3, [sp, #16]
-    stp x4, x5, [sp, #32]
-    stp x6, x7, [sp, #48]
-    stp x8, x9, [sp, #64]
-    stp x10, x11, [sp, #80]
-    stp x12, x13, [sp, #96]
-    stp x14, x15, [sp, #112]
-    stp x16, x17, [sp, #128]
-    stp x18, x19, [sp, #144]
-    stp x20, x21, [sp, #160]
-    stp x22, x23, [sp, #176]
-    stp x24, x25, [sp, #192]
-    stp x26, x27, [sp, #208]
-    stp x28, x29, [sp, #224]
-    str x30, [sp, #240]
+    /* sscratch is zero while the kernel runs, and holds the kernel stack top
+       while U-mode runs. This makes the next trap's stack switch unambiguous. */
+    ld t0, 264(sp)
+    andi t0, t0, 256              /* sstatus.SPP: 1 = return to S-mode */
+    bnez t0, .Lreturn_to_supervisor
+    addi t0, sp, 304
+    csrw sscratch, t0
+    j .Lrestore_regs
+.Lreturn_to_supervisor:
+    csrw sscratch, zero
 
-    mrs x0, elr_el1
-    str x0, [sp, #248]
-    mrs x0, spsr_el1
-    str x0, [sp, #256]
-    mrs x0, esr_el1
-    str x0, [sp, #264]
-    mrs x0, far_el1
-    str x0, [sp, #272]
-.endm
-
-sync_el1_entry:
-    SAVE_EXCEPTION_FRAME
-    mov x0, sp
-    bl exception_sync_el1
-    b exception_restore_el1
-
-sync_el0_entry:
-    SAVE_EXCEPTION_FRAME
-    mov x0, sp
-    bl exception_sync_el0
-    b exception_restore_el1
-
-irq_el1_entry:
-    SAVE_EXCEPTION_FRAME
-    mov x0, sp
-    bl interrupt_dispatch
-    b exception_restore_el1
-
-irq_el0_entry:
-    SAVE_EXCEPTION_FRAME
-    mov x0, sp
-    bl interrupt_dispatch
-    b exception_restore_el1
-
-exception_restore_el1:
-    /* Restore architectural exception state first. */
-    ldr x0, [sp, #248]
-    msr elr_el1, x0
-
-    ldr x0, [sp, #256]
-    msr spsr_el1, x0
-
-    /* Restore all GPRs exactly as they were at exception entry. */
-    ldp x28, x29, [sp, #224]
-    ldr x30, [sp, #240]
-    ldp x26, x27, [sp, #208]
-    ldp x24, x25, [sp, #192]
-    ldp x22, x23, [sp, #176]
-    ldp x20, x21, [sp, #160]
-    ldp x18, x19, [sp, #144]
-    ldp x16, x17, [sp, #128]
-    ldp x14, x15, [sp, #112]
-    ldp x12, x13, [sp, #96]
-    ldp x10, x11, [sp, #80]
-    ldp x8, x9, [sp, #64]
-    ldp x6, x7, [sp, #48]
-    ldp x4, x5, [sp, #32]
-    ldp x2, x3, [sp, #16]
-    ldp x0, x1, [sp, #0]
-
-    add sp, sp, #288
-    eret
-
-irq_unhandled_entry:
-    b exception_irq_unhandled
+.Lrestore_regs:
+    ld ra,     8(sp)
+    ld gp,    24(sp)
+    ld tp,    32(sp)
+    ld t1,    48(sp)
+    ld t2,    56(sp)
+    ld s0,    64(sp)
+    ld s1,    72(sp)
+    ld a0,    80(sp)
+    ld a1,    88(sp)
+    ld a2,    96(sp)
+    ld a3,   104(sp)
+    ld a4,   112(sp)
+    ld a5,   120(sp)
+    ld a6,   128(sp)
+    ld a7,   136(sp)
+    ld s2,   144(sp)
+    ld s3,   152(sp)
+    ld s4,   160(sp)
+    ld s5,   168(sp)
+    ld s6,   176(sp)
+    ld s7,   184(sp)
+    ld s8,   192(sp)
+    ld s9,   200(sp)
+    ld s10,  208(sp)
+    ld s11,  216(sp)
+    ld t3,   224(sp)
+    ld t4,   232(sp)
+    ld t5,   240(sp)
+    ld t6,   248(sp)
+    ld t0,    40(sp)
+    ld sp,    16(sp)
+    sret
+.size riscv64_trap_entry, .-riscv64_trap_entry

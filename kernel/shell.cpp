@@ -2,7 +2,6 @@
 #include "keyboard.h"
 #include "commands.h"
 #include "uart.h"
-#include "fb.h"
 #include "vfs.h"
 #include "fs.h"
 #include "security.h"
@@ -15,7 +14,7 @@ static const char* command_names[] = {
     "elf","syscall","user","userdemo","su","logout","exit","level","mmu","disk","diskread",
     "diskwrite","diskflush","apps","uname","whoami","net","ping","selftest","pages","tasks",
     "mount","stats","log","irq","grep","find","history","date","du","df","wc","chmod","env","export",
-    "ifconfig","nslookup","dnsserver","smp","fbinfo"
+    "ifconfig","nslookup","dnsserver","smp"
 };
 
 static void shell_prompt_text()
@@ -30,13 +29,6 @@ static void shell_prompt_text()
     uart_putc(security_prompt_char());
     uart_putc(' ');
 
-    fb_print("[", 0x00FF00);
-    fb_print(security_username(), 0x00FF00);
-    fb_print("@RioOS ", 0x00FF00);
-    fb_print(cwd, 0x00FF00);
-    fb_print("]", 0x00FF00);
-    fb_putc(security_prompt_char(), 0x00FF00);
-    fb_putc(' ', 0x00FF00);
 }
 
 static void redraw_line(const char* input, int length)
@@ -231,7 +223,6 @@ void shell()
             {
                 input[length] = '\0';
                 uart_puts("\r\n");
-                fb_print("\r\n", 0xFFFFFF);
                 if (length > 0) history_add(input);
                 break;
             }
@@ -243,7 +234,6 @@ void shell()
                     --length;
                     input[length] = '\0';
                     uart_puts("\b \b");
-                    fb_putc('\b', 0xFFFFFF);
                 }
                 continue;
             }
@@ -253,12 +243,10 @@ void shell()
                 input[length++] = c;
                 input[length] = '\0';
                 uart_putc(c);
-                fb_putc(c, 0xFFFFFF);
             }
         }
 
         execute_command(input);
         uart_puts("\r\n");
-        fb_print("\r\n", 0xFFFFFF);
     }
 }

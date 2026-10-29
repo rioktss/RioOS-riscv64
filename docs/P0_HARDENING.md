@@ -12,7 +12,7 @@ This increment focuses on safety invariants in the existing single-core kernel. 
 - MMU user-page setup fails closed, validates page-permission flags, rejects unknown flags and write/execute mappings, and refuses to configure EL0 mappings when the MMU is disabled.
 - The ELF loader accepts RISC-V64 `ET_EXEC`, validates load flags/alignment, rejects PT_LOAD ranges that share a page (permissions are page-granular), clears stale loader status on failure, and resets user mappings if activation fails.
 - User path/string syscall scans use integer-address overflow guards before dereferencing user-provided pointers.
-- Added `tests/process_host_test.cpp` and wired it into `build.sh` and release verification.
+- Added `tests/process_host_test.cpp` and wired it into `linux/build.sh` and release verification.
 
 ## Explicit limits (not completed by this patch)
 
