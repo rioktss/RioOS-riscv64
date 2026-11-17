@@ -8,7 +8,7 @@ QEMU="${QEMU:-qemu-system-riscv64}"
 KERNEL="${KERNEL:-build/riscv64/kernel.elf}"
 DISK="${DISK:-storage/disk.img}"
 MEM="${RIOOS_MEM:-128M}"
-SMP="${RIOOS_SMP:-1}"
+SMP="${RIOOS_SMP:-2}"
 BIOS="${RIOOS_BIOS:-default}"
 
 if [[ "${1:-}" == '-h' || "${1:-}" == '--help' ]]; then
